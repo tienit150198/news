@@ -29,6 +29,7 @@ import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity implements ArticleAdapter.OnItemClickListener, ILoadMore {
+    private static final String COUNTRY = "us";
     private ActivityMainBinding binding;
 
     private MainViewModel mMainViewModel;
@@ -54,7 +55,7 @@ public class MainActivity extends AppCompatActivity implements ArticleAdapter.On
         mMainViewModel = new MainViewModel();
 
         disposable.add(
-                mMainViewModel.getNews("xx", getString(R.string.news_key))
+                mMainViewModel.getNews(COUNTRY, getString(R.string.news_key))
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .doOnNext(news -> {
@@ -97,6 +98,7 @@ public class MainActivity extends AppCompatActivity implements ArticleAdapter.On
     }
 
     private static final String TAG = "LOG_MainActivity";
+
     public void onSucess(News news) {
         Log.d(TAG, "onSucess: " + news.toString());
         mArticleList = news.getArticles();
