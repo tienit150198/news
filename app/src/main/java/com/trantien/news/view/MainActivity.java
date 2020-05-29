@@ -9,7 +9,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -25,7 +24,11 @@ import com.trantien.news.models.viewmodel.MainViewModel;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements ArticleAdapter.OnItemClickListener, MainViewModel.OnResult, ILoadMore {
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.disposables.CompositeDisposable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
+
+public class MainActivity extends AppCompatActivity implements ArticleAdapter.OnItemClickListener, ILoadMore {
     private ActivityMainBinding binding;
 
     private MainViewModel mMainViewModel;
@@ -33,6 +36,8 @@ public class MainActivity extends AppCompatActivity implements ArticleAdapter.On
 
     private List<Article> mArticleList;
     private List<Article> displayArrayList;
+
+    private CompositeDisposable disposable = new CompositeDisposable();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,9 +51,25 @@ public class MainActivity extends AppCompatActivity implements ArticleAdapter.On
         binding.recyclerMain.setVisibility(View.GONE);
         binding.toolbar.setVisibility(View.GONE);
 
-        mMainViewModel = ViewModelProviders.of(this).get(MainViewModel.class);
-        mMainViewModel.setListener(this);
-        mMainViewModel.getNews("us", getString(R.string.news_key));
+        mMainViewModel = new MainViewModel();
+
+        disposable.add(
+                mMainViewModel.getNews("xx", getString(R.string.news_key))
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .doOnNext(news -> {
+                            if (news.getStatus() != null) {
+                                onSucess(news);
+                            }
+                        })
+                        .doOnError(throwable -> {
+                            if (throwable != null) {
+                                Log.d(TAG, "onCreate: " + throwable.toString());
+                                onFail(throwable);
+                            }
+                        })
+                        .subscribe()
+        );
 
         mArticleList = new ArrayList<>();
         displayArrayList = new ArrayList<>();
@@ -63,14 +84,21 @@ public class MainActivity extends AppCompatActivity implements ArticleAdapter.On
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        disposable.clear();
+    }
+
+    @Override
     public void onItemClick(View view, int position) {
         Intent intent = new Intent(this, DetailActivity.class);
         intent.putExtra(Constraint.SEND_URL, mArticleList.get(position).getUrl());
         startActivity(intent);
     }
 
-    @Override
+    private static final String TAG = "LOG_MainActivity";
     public void onSucess(News news) {
+        Log.d(TAG, "onSucess: " + news.toString());
         mArticleList = news.getArticles();
 
         for (int i = 0; i < Math.min(mArticleList.size(), 10); i++) {
@@ -86,9 +114,8 @@ public class MainActivity extends AppCompatActivity implements ArticleAdapter.On
         binding.toolbar.setVisibility(View.VISIBLE);
     }
 
-    @Override
-    public void onFail(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    public void onFail(Throwable throwable) {
+        Toast.makeText(this, throwable.getMessage(), Toast.LENGTH_SHORT).show();
     }
 
     @Override

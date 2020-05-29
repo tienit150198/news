@@ -1,34 +1,30 @@
 package com.trantien.news.data;
 
-import android.app.Application;
-
-import androidx.annotation.NonNull;
-
 import com.trantien.news.api.APIClient;
 import com.trantien.news.api.RequestAPI;
 import com.trantien.news.models.headline.News;
 
-import retrofit2.Call;
+import io.reactivex.rxjava3.core.Single;
 
 public class Repository {
     private static Repository mInstance;
 
     private RequestAPI mCallApi;
 
-    private Repository(final Application application) {
+    private Repository() {
         mCallApi = APIClient.getClient().create(RequestAPI.class);
     }
 
-    public static Repository getInstance(@NonNull Application application) {
+    public static Repository getInstance() {
         if (mInstance == null) {
             synchronized (Repository.class) {
-                mInstance = new Repository(application);
+                mInstance = new Repository();
             }
         }
         return mInstance;
     }
 
-    public Call<News> getAllHeadLine(String country, String apiKey) {
+    public Single<News> getAllHeadLine(String country, String apiKey) {
         return mCallApi.getAllHeadLine(country, apiKey);
     }
 
